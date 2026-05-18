@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #fdfbf6;
+  --color-card: #ffffff;
+  --color-primary: #2f6b2f;
+  --color-primary-dark: #1f4f24;
+  --color-primary-soft: #eef5ea;
+  --color-text: #1f1f1a;
+  --color-muted: #7a756b;
+  --color-border: #e5ded3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family:
+    Inter,
+    "Noto Sans SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+}
+
+/* 轻微纸张质感，保持克制 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  z-index: 9999;
+  background-image:
+    radial-gradient(circle at 1px 1px, #000 1px, transparent 0);
+  background-size: 18px 18px;
+  mix-blend-mode: multiply;
+}
