@@ -26,6 +26,6 @@ def get_user_id_from_token(token : str | None = Header(None) ) -> int :
         if user_id is None:
             raise ValueError
         return int(user_id)
-    
+
     except (ValueError, JWTError, TypeError) :
         raise HTTPException(401, "toekn无效或已过期")

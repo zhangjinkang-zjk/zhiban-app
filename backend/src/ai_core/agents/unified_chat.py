@@ -189,7 +189,7 @@ class UnifiedChat:
         return self.store[session_id]
 
     def _build_agent(self):
-        system_prompt = load_prompt("unified")
+        system_prompt = load_prompt("chat/unified")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),

@@ -79,7 +79,7 @@ class PortraitChat:
         return self.store[session_id]
 
     def _build_agent(self):
-        system_prompt = load_prompt("portrait")
+        system_prompt = load_prompt("portrait/portrait")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),

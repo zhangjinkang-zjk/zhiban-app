@@ -30,24 +30,26 @@ def _get_embed_model():
     return _embed_model
 
 
-async def search(query: str, top_k: int = 5, user_id: int = None) -> str:
+async def search(query: str, top_k: int = 5, user_id: int = None, category: str = None) -> str:
     """
     从知识库检索资料。
     - user_id 为空：只查公开资料
     - user_id 不为空：查公开资料 + 该用户自己的私有资料
+    - category: 限定分类，如 "exercise" / "textbook"
     """
     try:
         model = _get_embed_model()
         query_vec = model.encode(query, normalize_embeddings=True)
 
         if user_id:
-            records = await KnowledgeVector.filter(
-                Q(visibility="public") | Q(user_id=user_id)
-            ).values("title", "content", "embedding")
+            qs = KnowledgeVector.filter(Q(visibility="public") | Q(user_id=user_id))
         else:
-            records = await KnowledgeVector.filter(
-                visibility="public"
-            ).values("title", "content", "embedding")
+            qs = KnowledgeVector.filter(visibility="public")
+
+        if category:
+            qs = qs.filter(category=category)
+
+        records = await qs.values("title", "content", "category", "embedding")
 
         if not records:
             return "知识库中暂无相关内容"
@@ -56,13 +58,13 @@ async def search(query: str, top_k: int = 5, user_id: int = None) -> str:
         for r in records:
             vec = np.array(json.loads(r["embedding"]), dtype=np.float32)
             sim = float(np.dot(query_vec, vec))
-            scored.append((sim, r["title"], r["content"]))
+            scored.append((sim, r["title"], r["content"], r.get("category", "")))
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
         items = [
-            f"【资料{i+1}】来源：{title}\n{content}\n"
-            for i, (_, title, content) in enumerate(scored[:top_k])
+            f"【资料{i+1}】来源：{title}（{cat}）\n{content}\n"
+            for i, (_, title, content, cat) in enumerate(scored[:top_k])
         ]
         return "\n".join(items)
 
@@ -75,11 +77,13 @@ async def ingest(
     content: str,
     user_id: int = None,
     visibility: str = "private",
+    category: str = "knowledge_point",
 ) -> str:
     """
     向知识库添加一条资料。
     - user_id=None: 系统上传（需管理员权限）
     - visibility='public': 全员可见; 'private': 仅上传者可见
+    - category: 见 KB_CATEGORIES
     """
     try:
         if len(content.strip()) < 50:
@@ -98,6 +102,9 @@ async def ingest(
             if existing.user_id is None and user_id is not None:
                 existing.user_id = user_id
                 updated = True
+            if category != existing.category:
+                existing.category = category
+                updated = True
             if updated:
                 await existing.save()
                 return f"「{title}」已存在，已更新权限"
@@ -110,9 +117,10 @@ async def ingest(
             embedding=json.dumps(vector.tolist()),
             user_id=user_id,
             visibility=visibility,
+            category=category,
         )
         label = "公开" if visibility == "public" else "私有"
-        return f"「{title}」已入库（{len(content)}字，{label}）"
+        return f"「{title}」已入库（{len(content)}字，{label}，{category}）"
 
     except Exception as e:
         return f"入库失败：{e}"
@@ -120,7 +128,7 @@ async def ingest(
 
 async def list_all(user_id: int = None, visibility: str = None) -> list[dict]:
     """
-    列出知识库条目。
+    列出知识库条目（原始切片）。
     - user_id: 过滤上传者（可选）
     - visibility: 过滤可见性（可选）
     """
@@ -131,15 +139,57 @@ async def list_all(user_id: int = None, visibility: str = None) -> list[dict]:
         qs = qs.filter(visibility=visibility)
 
     records = await qs.order_by("-created_at").values(
-        "doc_id", "title", "content", "user_id", "visibility", "created_at"
+        "doc_id", "title", "content", "category", "user_id", "visibility", "created_at"
     )
     return list(records)
+
+
+async def list_grouped(user_id: int = None, visibility: str = None) -> list[dict]:
+    """
+    按原始文档分组展示，合并 BGE 切片避免前端展示混乱。
+    切片标题格式: "文档名 (第N部分)" → 按 "文档名" 合并
+    """
+    import re
+
+    qs = KnowledgeVector.all()
+    if user_id:
+        qs = qs.filter(Q(visibility="public") | Q(user_id=user_id))
+    if visibility:
+        qs = qs.filter(visibility=visibility)
+
+    records = await qs.order_by("-created_at").values(
+        "doc_id", "title", "content", "category", "user_id", "visibility", "created_at"
+    )
+
+    groups: dict[str, dict] = {}
+    for r in records:
+        title = r["title"]
+        base = re.sub(r"\s*（第\d+部分）\s*", "", title)
+        base = re.sub(r"\s*\(第\d+部分\)\s*", "", base)
+
+        if base not in groups:
+            groups[base] = {
+                "title": base,
+                "category": r.get("category", "knowledge_point"),
+                "chunks": 0,
+                "total_chars": 0,
+                "preview": r["content"][:200],
+                "visibility": r["visibility"],
+                "uploader_id": r["user_id"],
+                "created_at": str(r["created_at"]),
+            }
+        groups[base]["chunks"] += 1
+        groups[base]["total_chars"] += len(r["content"])
+        if str(r["created_at"]) < groups[base]["created_at"]:
+            groups[base]["created_at"] = str(r["created_at"])
+
+    return sorted(groups.values(), key=lambda x: x["created_at"], reverse=True)
 
 
 async def get_by_id(doc_id: str) -> dict | None:
     """根据 doc_id 获取单条知识库记录"""
     record = await KnowledgeVector.filter(doc_id=doc_id).first().values(
-        "doc_id", "title", "content", "user_id", "visibility", "created_at"
+        "doc_id", "title", "content", "category", "user_id", "visibility", "created_at"
     )
     return record
 

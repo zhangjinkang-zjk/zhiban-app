@@ -16,7 +16,7 @@ async def init_db():
         return 
     await Tortoise.init(
         db_url=database,
-        modules={"models": ["backend.src.models.usermodel", "backend.src.models.chat_history_model", "backend.src.models.portraitmodel", "backend.src.models.knowledgemodel"]}
+        modules={"models": ["backend.src.models.usermodel", "backend.src.models.chat_history_model", "backend.src.models.portraitmodel", "backend.src.models.knowledgemodel", "backend.src.models.resource_model", "backend.src.models.agent_skill_model"]}
     )
     await Tortoise.generate_schemas()
     _DB_INITIALIZED = True

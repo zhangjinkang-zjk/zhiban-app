@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Q
 
 from backend.src.utils.jwt import get_user_id_from_token
 from backend.src.utils.file_processor import extract_text, chunk_text
-from backend.src.utils.knowledge_base import ingest, list_all, get_by_id, update, delete
+from backend.src.utils.knowledge_base import ingest, list_all, list_grouped, get_by_id, update, delete
 from backend.src.utils.admin_check import is_admin
 
 router = APIRouter(prefix="/knowledge_base", tags=["知识库"])
@@ -21,11 +21,13 @@ async def upload_document(
     file: UploadFile = File(...),
     title: str = Form(None),
     visibility: str = Form("private"),
+    category: str = Form("knowledge_point"),
 ):
     """
     上传文档到知识库。
     - visibility='private'（默认）：仅上传者可见
     - visibility='public'：需管理员权限，全员可见
+    - category: 前端自定义分类字符串
     """
     tmp_path = None
     try:
@@ -69,6 +71,7 @@ async def upload_document(
                 content=chunk,
                 user_id=user_id,
                 visibility=visibility,
+                category=category,
             )
             results.append(msg)
 
@@ -111,7 +114,7 @@ async def list_entries(
     """列出知识库条目。mine=true 只看自己的，visibility 过滤公开/私有"""
     try:
         filter_user = user_id if mine else None
-        records = await list_all(user_id=filter_user, visibility=visibility)
+        records = await list_grouped(user_id=filter_user, visibility=visibility)
         return {"code": 200, "msg": "success", "data": records}
     except Exception as e:
         raise HTTPException(500, str(e))

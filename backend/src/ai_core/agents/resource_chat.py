@@ -103,7 +103,7 @@ class ResourceChat:
         return self.store[session_id]
 
     def _build_agent(self):
-        system_prompt = load_prompt("resource")
+        system_prompt = load_prompt("resource/knowledge")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),

@@ -62,7 +62,7 @@ class DailyChat:
         return self.store[session_id]
 
     def _build_agent(self):
-        system_prompt = load_prompt("dailychat")
+        system_prompt = load_prompt("chat/daily")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),

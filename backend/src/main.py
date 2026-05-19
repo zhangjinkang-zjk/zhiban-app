@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.src.utils.database import init_db, close_db
 from backend.src.router.agentsrouter.unified_chat_router import router as unified_chat_router
 from backend.src.router.agentsrouter.portrait_router import router as portrait_router
+from backend.src.router.agentsrouter.resource_router import router as resource_router
 from backend.src.router.knowledge_router import router as knowledge_router
 from backend.src.router.userrouter import router as user_router
+from backend.src.router.admin_router import router as admin_router
 from backend.src.utils.jwt import create_access_token
 
 app = FastAPI(
@@ -46,4 +48,6 @@ async def shutdown():
 app.include_router(user_router)
 app.include_router(unified_chat_router)
 app.include_router(portrait_router)
+app.include_router(resource_router)
 app.include_router(knowledge_router)
+app.include_router(admin_router)
