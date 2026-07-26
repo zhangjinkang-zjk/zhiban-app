@@ -39,6 +39,8 @@ from backend.src.router.admin_router import router as admin_router
 from backend.src.router.exam_router import router as exam_router
 from backend.src.router.path_router import router as path_router
 from backend.src.router.learning_path_router import router as learning_path_router
+from backend.src.router.narration_router import router as narration_router
+from backend.src.router.narration_router import legacy_video_router as legacy_video_narration_router
 from backend.src.router.video_router import router as video_router
 from backend.src.router.study_router import router as study_router
 from backend.src.router.notification_router import router as notification_router
@@ -152,6 +154,8 @@ app.include_router(admin_router)
 app.include_router(exam_router)
 app.include_router(path_router)
 app.include_router(learning_path_router)
+app.include_router(narration_router)
+app.include_router(legacy_video_narration_router)
 app.include_router(video_router)
 app.include_router(study_router)
 app.include_router(notification_router)

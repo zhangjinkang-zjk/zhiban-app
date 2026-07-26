@@ -10,7 +10,7 @@ from backend.src.utils.knowledge_base import list_grouped
 
 
 def _knowledge_base_title_prefix(title: str) -> str:
-    return str(title or "").split(" (")[0].split("锛堢")[0].strip()
+    return str(title or "").split(" (")[0].split("（第")[0].strip()
 
 router = APIRouter(prefix = "/admin", tags = ["管理员"])
 

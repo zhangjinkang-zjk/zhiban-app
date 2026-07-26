@@ -62,7 +62,12 @@ async def narrate_content(content: str, resource_type: str, voice: str, resource
     return {"sections": results}
 
 
-async def narrate_resource(resource_id: int, voice: str = "zh-CN-XiaoxiaoNeural", force_regenerate: bool = False):
+async def narrate_resource(
+    resource_id: int,
+    voice: str = "zh-CN-XiaoxiaoNeural",
+    force_regenerate: bool = False,
+    user_id: int | None = None,
+):
     """对某个文字类资源逐段生成旁白，已有则直接返回，无则生成写入 DB
 
     Args:
@@ -75,14 +80,22 @@ async def narrate_resource(resource_id: int, voice: str = "zh-CN-XiaoxiaoNeural"
     """
     from backend.src.models.resource_model import GeneratedResource
     from backend.src.models.narration_model import Narration
+    from tortoise.expressions import Q
 
-    resource = await GeneratedResource.filter(id=resource_id).first()
+    resource_query = GeneratedResource.filter(id=resource_id)
+    if user_id is not None:
+        resource_query = resource_query.filter(Q(user_id=user_id) | Q(visibility="public"))
+
+    resource = await resource_query.first()
     if not resource:
         raise ServiceError("资源不存在")
     if resource.resource_type not in NARRATABLE_TYPES:
         raise ServiceError(f"资源类型 {resource.resource_type} 不支持旁白，仅支持：{', '.join(sorted(NARRATABLE_TYPES))}")
 
     # 强制重生成 → 删旧记录和音频文件
+    if force_regenerate and user_id is not None and resource.user_id != user_id:
+        raise ServiceError("只能重新生成自己资源的旁白")
+
     if force_regenerate:
         existing = await Narration.filter(resource_id=resource_id, voice=voice).first()
         if existing:
@@ -396,8 +409,12 @@ async def list_narrations(user_id: int) -> list[dict]:
 async def get_narration(narration_id: int, user_id: int) -> dict | None:
     """获取单个旁白详情"""
     from backend.src.models.narration_model import Narration
+    from tortoise.expressions import Q
 
-    record = await Narration.filter(id=narration_id, resource__user_id=user_id).prefetch_related("resource").first()
+    record = await Narration.filter(
+        Q(id=narration_id),
+        Q(resource__user_id=user_id) | Q(resource__visibility="public"),
+    ).prefetch_related("resource").first()
     if not record:
         return None
     return {
