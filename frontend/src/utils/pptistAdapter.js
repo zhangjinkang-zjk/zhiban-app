@@ -1,4 +1,4 @@
-export const PPTIST_PAYLOAD_KEY = 'zhiban:pptist:payload'
+const PPTIST_PAYLOAD_KEY = 'zhiban:pptist:payload'
 
 const WIDTH = 1000
 const HEIGHT = 562.5

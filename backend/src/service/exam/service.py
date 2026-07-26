@@ -39,7 +39,7 @@ def _normalize_db_answer(raw: str) -> str:
             return "A" if parsed else "B"
         text = str(parsed)
     except (json.JSONDecodeError, TypeError):
-        pass
+        logger.debug("答案不是 JSON 格式，按普通文本解析 value=%r", text, exc_info=True)
     # 字符串 true/false → A/B
     upper = text.strip().upper()
     if upper in ("TRUE", "FALSE"):
@@ -59,7 +59,7 @@ def _parse_multi_ans(ans: str) -> set:
         try:
             return set(str(x).strip().upper() for x in json.loads(text))
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.debug("多选答案不是 JSON 数组，按逗号分隔解析 value=%r", text, exc_info=True)
     return set(text.upper().replace(" ", "").split(","))
 
 
@@ -239,7 +239,7 @@ class ExamService:
                         passed = payload.get("review_passed", True)
                         yield f"data: {json.dumps({'type': 'progress', 'msg': f'审核{"通过" if passed else "未通过，重新生成"}...'}, ensure_ascii=False)}\n\n"
                 except json.JSONDecodeError:
-                    pass
+                    logger.warning("题目流式事件 JSON 解析失败 raw=%r", data_str[:300], exc_info=True)
 
         # 查已保存的 exercise 资源，解析题目并保存
         saved_resources = await GeneratedResource.filter(

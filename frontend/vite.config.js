@@ -18,6 +18,9 @@ const proxyTarget = {
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -47,11 +50,4 @@ export default defineConfig({
       '/debug': proxyTarget,
     },
   },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@use "@/assets/styles/base-style.scss" as *;`
-      }
-    }
-  }
 })

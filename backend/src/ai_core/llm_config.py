@@ -2,12 +2,15 @@
 import asyncio
 import hashlib
 import json as _json
+import logging
 import threading
 from pathlib import Path
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage
 from dotenv import load_dotenv
 import os
+
+logger = logging.getLogger(__name__)
 
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
@@ -111,7 +114,7 @@ class _PriorityLLM:
                         response_metadata=_cached.get("response_metadata", {}),
                     )
             except Exception:
-                pass
+                logger.debug("LLM cache read failed", exc_info=True)
 
         user_sem = None
         if user_id:
@@ -139,7 +142,7 @@ class _PriorityLLM:
                         "response_metadata": {k: str(v) for k, v in _meta.items() if isinstance(v, (str, int, float))},
                     }, self._cache_ttl)
                 except Exception:
-                    pass
+                    logger.debug("LLM cache write failed", exc_info=True)
             return resp
 
         global _async_high_active

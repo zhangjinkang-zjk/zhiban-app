@@ -149,7 +149,7 @@ async def _generate_tts(text: str, voice: str, output_path: str, user_id: int | 
                 try:
                     os.remove(f)
                 except OSError:
-                    pass
+                    logger.debug("[TTS] 清理临时分段文件失败 path=%s", f, exc_info=True)
             return None
         return (i, part_path, timestamps)
 
@@ -164,7 +164,7 @@ async def _generate_tts(text: str, voice: str, output_path: str, user_id: int | 
                     try:
                         os.remove(f)
                     except OSError:
-                        pass
+                        logger.debug("[TTS] 清理已生成分段文件失败 path=%s", f, exc_info=True)
             return None
         part_results.append(r)
     part_results.sort(key=lambda x: x[0])
@@ -183,7 +183,7 @@ async def _generate_tts(text: str, voice: str, output_path: str, user_id: int | 
                 try:
                     os.remove(f)
                 except OSError:
-                    pass
+                    logger.debug("[TTS] 清理临时拼接文件失败 path=%s", f, exc_info=True)
 
     return all_timestamps
 
@@ -221,7 +221,7 @@ async def _generate_tts_one(text: str, voice: str, output_path: str, json_path: 
     try:
         await asyncio.to_thread(_dump_json, json_path, word_timestamps)
     except IOError:
-        pass
+        logger.exception("[TTS] 时间戳 JSON 写入失败 path=%s", json_path)
 
     async with _tts_lock:
         global _tts_done_count
@@ -319,7 +319,11 @@ async def _generate_sections_audio(sections: list[dict], voice: str, base_dir: P
                     "word_timestamps": word_timestamps,
                 }
             except (json.JSONDecodeError, IOError):
-                pass
+                logger.warning(
+                    "[Narration] TTS 缓存读取失败，重新生成 resource=%s section=%s json=%s",
+                    resource_id, i, json_path,
+                    exc_info=True,
+                )
 
         word_timestamps = await _generate_tts(text, voice, output_path, user_id=user_id)
         if word_timestamps is None:

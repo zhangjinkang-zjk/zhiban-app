@@ -117,7 +117,7 @@ class StudyService:
                             "source": "radar",
                         })
         except Exception:
-            pass
+            logger.exception("雷达弱项读取失败 user_id=%s", user_id)
 
         # ── 学习路径 ──
         paths = []
@@ -205,7 +205,7 @@ class StudyService:
         try:
             guidance = await build_learning_guidance(user_id)
         except Exception:
-            pass
+            logger.exception("学习指导生成失败 user_id=%s", user_id)
 
         return {
             "study_time": {
@@ -292,7 +292,11 @@ class StudyService:
                     try:
                         ids.update(json.loads(r.resource_ids))
                     except Exception:
-                        pass
+                        logger.warning(
+                            "路径进度资源 ID 解析失败 user_id=%s path_id=%s node_id=%s raw=%r",
+                            user_id, p.id, r.node_id, r.resource_ids,
+                            exc_info=True,
+                        )
             path_resource_ids[p.id] = ids
             all_resource_ids.update(ids)
 
@@ -349,7 +353,11 @@ class StudyService:
                         if isinstance(tags, list):
                             path_tags.update(tags)
                     except Exception:
-                        pass
+                        logger.warning(
+                            "路径节点知识标签解析失败 user_id=%s path_id=%s node_id=%s raw=%r",
+                            user_id, p.id, n.id, n.knowledge_tags,
+                            exc_info=True,
+                        )
 
             weak_points = []
             for tag in path_tags:

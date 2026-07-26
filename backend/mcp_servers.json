@@ -1,0 +1,30 @@
+{
+  "servers": {
+    "bocha_search": {
+      "enabled": false,
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["mcp-bocha-search"],
+      "env": {
+        "BOCHA_API_KEY": "${BOCHA_API_KEY}"
+      }
+    },
+    "modelscope_resources": {
+      "enabled": false,
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["modelscope-mcp-server"],
+      "env": {
+        "MODELSCOPE_API_TOKEN": "${MODELSCOPE_API_TOKEN}"
+      }
+    },
+    "aliyun_bailian_knowledge": {
+      "enabled": false,
+      "transport": "streamable_http",
+      "url": "${BAILIAN_KNOWLEDGE_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${BAILIAN_MCP_TOKEN}"
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import weakref
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -92,6 +93,70 @@ def _inject_chat_group_id(tool, chat_group_id: int):
 
 _MAX_HISTORY_TURNS = 20
 
+<<<<<<< Updated upstream
+=======
+# ── 消息分类：按需加载工具行为指南 ──
+
+_CREATE_TRIGGERS = [
+    "生成学习", "生成资料", "生成文档", "做个PPT", "做PPT", "生成PPT",
+    "做一份PPT", "做一个PPT", "弄个PPT", "弄一份PPT",
+    "做课件", "生成课件", "弄个课件", "做个课件",
+    "生成word", "生成Word", "做个word", "做个Word", "word文档", "Word文档",
+    "整理成文档", "整理成PPT", "做成文档", "做成PPT",
+    "生成思维导图", "生成脑图", "做思维导图", "做脑图",
+    "帮我整理", "帮我总结", "帮我生成", "我要一份", "想要一份", "需要一份",
+    "出题", "出几道", "出一些题", "出套题", "出一套题", "练习题", "测验", "考试模拟",
+    "做几道题", "来几道题", "做题", "习题", "试卷", "题库", "考考我",
+    "画一张", "画个", "生成图片", "生成一张图", "配图", "插图",
+    "帮我画", "帮我生成图",
+    "生成动画", "播放PPT", "演示PPT", "旁白", "念给我听",
+    "生成视频", "生成学习视频", "做个视频", "学习视频",
+    "搜视频", "找视频", "视频教程", "在线课程", "网课资源",
+]
+
+_CREATE_PATTERNS = [
+    r"(?:帮我|给我|请|麻烦)?(?:生成|制作|做|写|整理|弄|搞)(?:一个|一份|一些|几道|一套|套|点)?(?:学习)?(?:资料|文档|word|Word|PPT|ppt|课件|思维导图|脑图|习题|题库|练习|试卷|测验|案例|阅读|图片|配图|插图|动画|旁白|学习视频|视频)",
+    r"(?:我要|我想要|想要|需要|来个|来一份|给我来)(?:一个|一份|一些|几道|一套|套|点)?(?:学习)?(?:资料|文档|word|Word|PPT|ppt|课件|思维导图|脑图|习题|题库|练习|试卷|测验|案例|阅读|图片|配图|插图|学习视频)",
+    r"(?:出|来|搞|弄)(?:几道|一些|一套|套)?(?:题|练习|习题|试卷)",
+    r"(?:搜|找|搜索)(?:一下|一些|几个|个)?(?:教学)?(?:视频|视频教程|网课|课程资源)",
+]
+
+_MANAGE_TRIGGERS = [
+    "学习路径", "课程路径", "学习计划", "选课", "有哪些路径",
+    "加入路径", "路径管理", "修改节点", "添加节点", "删除节点",
+    "重新规划路径", "路径不合适", "路径查看",
+    "skill", "Skill", "自定义提示词", "修改提示词", "设置提示词",
+    "恢复默认", "升级生成", "删除skill", "创建skill",
+    "动作skill", "action skill", "添加能力", "添加工具",
+]
+
+_MANAGE_PATTERNS = [
+    r"(?:查看|列出|加入|开始|选择|重建|重新规划|调整|修改|添加|删除).{0,12}(?:学习路径|课程路径|路径|节点|学习计划)",
+    r"(?:升级|自定义|修改|设置|恢复|重置|删除).{0,12}(?:skill|Skill|提示词|生成风格|生成方式)",
+    r"(?:添加|创建|接入).{0,12}(?:工具|能力|接口|API|api)",
+]
+
+
+def _classify_message(message: str) -> set[str]:
+    """根据用户消息判断需要加载哪些工具行为指南"""
+    text = str(message or "")
+    cats = set()
+    for t in _CREATE_TRIGGERS:
+        if t in text:
+            cats.add("create")
+            break
+    if "create" not in cats and any(re.search(pattern, text, re.IGNORECASE) for pattern in _CREATE_PATTERNS):
+        cats.add("create")
+    for t in _MANAGE_TRIGGERS:
+        if t in text:
+            cats.add("manage")
+            break
+    if "manage" not in cats and any(re.search(pattern, text, re.IGNORECASE) for pattern in _MANAGE_PATTERNS):
+        cats.add("manage")
+    return cats
+
+
+>>>>>>> Stashed changes
 class Brain:
     _instances: weakref.WeakSet = weakref.WeakSet()
 

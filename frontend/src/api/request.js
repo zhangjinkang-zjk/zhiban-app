@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { parseJwtPayload } from '../utils/auth'
 
 export const DEFAULT_API_BASE_URL = 'http://127.0.0.1:2221'
 const rawApiBaseURL = import.meta.env.VITE_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL
@@ -54,19 +55,6 @@ const notifyAuthExpired = () => {
   window.setTimeout(() => {
     authExpiredNotified = false
   }, 2000)
-}
-
-const parseJwtPayload = token => {
-  try {
-    const payload = String(token || '').split('.')[1]
-    if (!payload) return null
-
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    return JSON.parse(window.atob(padded))
-  } catch {
-    return null
-  }
 }
 
 const looksLikeJwt = token => {
@@ -150,16 +138,30 @@ request.interceptors.response.use(
   }
 )
 
+const bindAuthEventListeners = () => {
+  if (window.__zhibanRequestAuthListenerCleanup) {
+    window.__zhibanRequestAuthListenerCleanup()
+  }
+
+  const handleLoginSuccess = () => {
+    scheduleAuthExpiryCheck(localStorage.getItem('token'))
+  }
+
+  const handleStorage = event => {
+    if (event.key === 'token') scheduleAuthExpiryCheck(event.newValue)
+  }
+
+  window.addEventListener('zhiban-login-success', handleLoginSuccess)
+  window.addEventListener('storage', handleStorage)
+  window.__zhibanRequestAuthListenerCleanup = () => {
+    window.removeEventListener('zhiban-login-success', handleLoginSuccess)
+    window.removeEventListener('storage', handleStorage)
+  }
+}
+
 if (typeof window !== 'undefined') {
   scheduleAuthExpiryCheck(localStorage.getItem('token'))
-
-  window.addEventListener('zhiban-login-success', () => {
-    scheduleAuthExpiryCheck(localStorage.getItem('token'))
-  })
-
-  window.addEventListener('storage', event => {
-    if (event.key === 'token') scheduleAuthExpiryCheck(event.newValue)
-  })
+  bindAuthEventListeners()
 }
 
 export default request

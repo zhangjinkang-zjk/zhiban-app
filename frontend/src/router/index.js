@@ -58,14 +58,6 @@ const router = createRouter({
       component: QuizRunnerView
     },
     {
-      path: '/spath',
-      redirect: '/learning-path'
-    },
-    {
-      path: '/situation',
-      redirect: '/learning-situation'
-    },
-    {
       path: '/learning-resources',
       name: 'learningResources',
       component: ResourceView

@@ -709,7 +709,7 @@ async def generate_ppt_parallel(
                     "current": idx + 1, "total": total,
                 })
             except Exception:
-                pass
+                logger.debug("[PPT-Section] stream progress push failed idx=%d section=%s", idx, section_title, exc_info=True)
 
         is_portrait_section = has_portrait and idx == 0
 
@@ -802,7 +802,7 @@ async def generate_ppt_parallel(
                         "section_title": _title,
                     })
                 except Exception:
-                    pass
+                    logger.debug("[PPT-Section] stream replace push failed idx=%d section=%s", _idx, _title, exc_info=True)
             _push_section(_idx, _content, _title)
 
         round_idx = 0
@@ -828,7 +828,7 @@ async def generate_ppt_parallel(
                         "current": idx + 1, "total": total,
                     })
                 except Exception:
-                    pass
+                    logger.debug("[PPT-Section] retry progress push failed idx=%d section=%s", idx, section_title, exc_info=True)
 
             # 拼接审核反馈到 prompt
             if not is_first_round and review_feedback:
@@ -1171,7 +1171,7 @@ async def generate_document_parallel(
                     "total": total,
                 })
             except Exception:
-                pass
+                logger.debug("[Doc-Section] stream progress push failed idx=%d section=%s", idx, section_title, exc_info=True)
 
         prev_section = sections[idx - 1] if idx > 0 else "（无）"
         next_section = sections[idx + 1] if idx < len(sections) - 1 else "（无）"
@@ -1280,7 +1280,7 @@ async def generate_document_parallel(
         try:
             stream_writer({"type": "stream_progress", "file_type": "document", "message": "文档生成完成", "current": total, "total": total})
         except Exception:
-            pass
+            logger.debug("[Doc-Parallel] done progress push failed", exc_info=True)
 
     return combined
 

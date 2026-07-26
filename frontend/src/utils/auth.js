@@ -3,13 +3,19 @@ export const isAdminRole = role => {
   return ['admin', 'administrator', 'super_admin', 'superadmin', 'system_admin', 'manager', 'root'].includes(value)
 }
 
-const parseJwtPayload = token => {
+const decodeBase64Url = value => {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/')
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+  const binary = window.atob(padded)
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
+}
+
+export const parseJwtPayload = token => {
   try {
     const payload = String(token || '').split('.')[1]
     if (!payload) return null
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    return JSON.parse(decodeURIComponent(escape(window.atob(padded))))
+    return JSON.parse(decodeBase64Url(payload))
   } catch {
     return null
   }

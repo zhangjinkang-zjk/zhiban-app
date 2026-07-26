@@ -506,15 +506,35 @@ const resetTaskQueueForCurrentUser = () => {
   }
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('zhiban-login-success', resetTaskQueueForCurrentUser)
-  window.addEventListener('zhiban:user-logged-out', resetTaskQueueForCurrentUser)
-  window.addEventListener('zhiban-auth-expired', resetTaskQueueForCurrentUser)
-  window.addEventListener('storage', event => {
+type GenerationTaskQueueWindow = Window & {
+  __zhibanGenerationTaskQueueCleanup?: () => void
+}
+
+const bindTaskQueueEventListeners = () => {
+  const browserWindow = window as GenerationTaskQueueWindow
+  browserWindow.__zhibanGenerationTaskQueueCleanup?.()
+
+  const handleStorage = (event: StorageEvent) => {
     if (event.key === 'user_id' || event.key === 'token') {
       syncTaskOwnerContext()
     }
-  })
+  }
+
+  window.addEventListener('zhiban-login-success', resetTaskQueueForCurrentUser)
+  window.addEventListener('zhiban:user-logged-out', resetTaskQueueForCurrentUser)
+  window.addEventListener('zhiban-auth-expired', resetTaskQueueForCurrentUser)
+  window.addEventListener('storage', handleStorage)
+
+  browserWindow.__zhibanGenerationTaskQueueCleanup = () => {
+    window.removeEventListener('zhiban-login-success', resetTaskQueueForCurrentUser)
+    window.removeEventListener('zhiban:user-logged-out', resetTaskQueueForCurrentUser)
+    window.removeEventListener('zhiban-auth-expired', resetTaskQueueForCurrentUser)
+    window.removeEventListener('storage', handleStorage)
+  }
+}
+
+if (typeof window !== 'undefined') {
+  bindTaskQueueEventListeners()
 }
 
 restorePersistedTasks()

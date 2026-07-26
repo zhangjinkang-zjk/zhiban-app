@@ -13,16 +13,13 @@
     "katex": "^0.17.0",
     "lucide-vue-next": "^1.0.0",
     "mind-elixir": "^5.12.2",
-    "pinia": "^3.0.4",
     "vue": "^3.5.34",
     "vue-router": "^5.0.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
     "@vitejs/plugin-vue": "^6.0.6",
-    "sass-embedded": "^1.99.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.12",
-    "vue-tsc": "^3.3.1"
+    "vite": "^8.0.12"
   }
 }

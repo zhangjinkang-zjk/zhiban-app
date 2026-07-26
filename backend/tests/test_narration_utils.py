@@ -1,7 +1,7 @@
 """
 文本拆分工具函数单元测试
 
-测试目标：backend/src/service/narration_service.py 的 _split_long_text()
+测试目标：backend/src/service/narration/service.py 的 _split_long_text()
 覆盖范围：
 - 短文本不拆分
 - 长文本按句子边界拆分
@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # 直接导入内部函数（测试私有函数是合理的）
-from backend.src.service.narration_service import _split_long_text
+from backend.src.service.narration.service import _split_long_text
 
 
 class TestSplitShortText:

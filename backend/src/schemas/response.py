@@ -8,15 +8,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-
-class ApiResponse(BaseModel):
-    code: int = Field(default=200)
-    msg: str = Field(default="success")
-    data: Any | None = Field(default=None)
-
-
 def ok(data: Any = None, msg: str = "success", code: int = 200) -> dict:
     payload = {"code": code, "msg": msg}
     if data is not None:

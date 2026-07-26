@@ -109,7 +109,7 @@ async def _build_portrait_context(user_id: int) -> str:
                 if radar and radar.get("dimensions"):
                     lines.append(PortraitRadarService.format_for_prompt(radar))
             except Exception:
-                pass
+                logger.debug("构建画像上下文：雷达读取失败 user_id=%s", user_id, exc_info=True)
             # 学习指导
             try:
                 from backend.src.service.portrait.service import build_learning_guidance
@@ -117,7 +117,7 @@ async def _build_portrait_context(user_id: int) -> str:
                 if guidance:
                     lines.append(guidance)
             except Exception:
-                pass
+                logger.debug("构建画像上下文：学习指导读取失败 user_id=%s", user_id, exc_info=True)
 
         if not lines:
             ctx = ""

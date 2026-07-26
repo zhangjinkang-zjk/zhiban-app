@@ -447,7 +447,7 @@ class PortraitChatHistory_Service:
             from backend.src.service.chat.service import invalidate_portrait_cache
             invalidate_portrait_cache(user_id)
         except Exception:
-            pass
+            logger.debug("画像缓存失效失败 user_id=%s", user_id, exc_info=True)
 
         logger.info("对话画像初始化成功 user_id=%s cognition=%s goal=%s tags=%s",
                      user_id, cognition, learning_goal, tags)

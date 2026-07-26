@@ -52,7 +52,7 @@ def _compute_node_count(subject: str, picture) -> int:
         try:
             traits = json.loads(picture.traits)
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.warning("画像 traits JSON 解析失败 user_id=%s raw=%r", getattr(picture, "user_id", None), picture.traits, exc_info=True)
     knowbase_data = traits.get("knowbase", {})
     if isinstance(knowbase_data, dict):
         kb_val = knowbase_data.get("value", "3")
@@ -708,7 +708,7 @@ class PathService:
                         if c.get("presentation_id"):
                             item["presentation_id"] = c["presentation_id"]
                     except (json.JSONDecodeError, TypeError):
-                        pass
+                        logger.warning("路径节点 HTML 资源内容解析失败 resource_id=%s", r.id, exc_info=True)
                 resources.append(item)
 
         return {
@@ -800,7 +800,7 @@ class PathService:
                                     for r in data.get("resources", []):
                                         _remember_generated_id(r.get("resource_id"))
                             except (json.JSONDecodeError, KeyError):
-                                pass
+                                logger.warning("学习路径资源生成 SSE 事件解析失败 raw=%r", event_str[:300], exc_info=True)
 
                 all_ids = [r.id for r in existing_records] + generated_ids
                 await update_progress_resource_ids(progress, all_ids)
@@ -1384,7 +1384,7 @@ class PathService:
                 try:
                     content = json.loads(existing_html.content or "{}")
                 except (json.JSONDecodeError, TypeError):
-                    pass
+                    logger.warning("路径视频 HTML 内容解析失败 resource_id=%s", existing_html.id, exc_info=True)
                 return {
                     "path_id": path_id,
                     "html_id": existing_html.id,
@@ -1463,7 +1463,7 @@ class PathService:
                 c = json.loads(existing.content)
                 pres_id = c.get("presentation_id", 0)
             except (json.JSONDecodeError, TypeError):
-                pass
+                logger.warning("路径视频详情内容解析失败 resource_id=%s", existing.id, exc_info=True)
         return {
             "path_id": path_id,
             "html_id": existing.id,
@@ -1543,7 +1543,7 @@ class PathService:
                             if c.get("presentation_id"):
                                 item["presentation_id"] = c["presentation_id"]
                         except (json.JSONDecodeError, TypeError):
-                            pass
+                            logger.warning("当前路径 HTML 资源内容解析失败 resource_id=%s", r.id, exc_info=True)
                     node_resources.append(item)
 
             # 计算该节点资源总查看次数

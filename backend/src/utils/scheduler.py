@@ -31,7 +31,7 @@ def _cleanup_old_files():
                     f.unlink()
                     cleaned += 1
             except OSError:
-                pass
+                logger.debug("清理过期文件失败 path=%s", f, exc_info=True)
         # 清理空的音频资源子目录
         if d.name != "_cache" and d.parent.name == "audio":
             continue
@@ -44,7 +44,7 @@ def _cleanup_old_files():
                     if not any(sub.iterdir()):
                         sub.rmdir()
                 except OSError:
-                    pass
+                    logger.debug("清理空音频目录失败 path=%s", sub, exc_info=True)
     if cleaned:
         logger.info("清理过期文件 %d 个", cleaned)
 
