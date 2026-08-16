@@ -373,116 +373,14 @@
                 </div>
               </dl>
 
-              <div v-if="showResources" class="node-resources-section">
-                <h3 class="resources-heading">学习资料</h3>
-
-                <div v-if="isNodeGenerationBusy(selectedNode)" class="resources-loading">
-                  AI 正在为你生成学习资料，通常需要 30-90 秒...
-                </div>
-
-                <template v-else-if="nodeResources.length > 0 || nodeQuizData">
-                  <div
-                    v-for="resource in nodeResources.filter(r => !isExerciseResource(r) && !isDynamicLessonResource(r))"
-                    :key="resource.id"
-                    class="resource-item"
-                  >
-                    <div class="file-head">
-                      <span class="file-icon">
-                        <FileImage v-if="isImageResource(resource)" :size="18" />
-                        <Presentation v-else-if="isPptResource(resource)" :size="18" />
-                        <GitBranch v-else-if="isMindmapResource(resource)" :size="18" />
-                        <Volume2 v-else-if="isAudioResource(resource)" :size="18" />
-                        <MonitorPlay v-else-if="isVideoResource(resource) || isHtmlResource(resource)" :size="18" />
-                        <FileText v-else :size="18" />
-                      </span>
-                      <div class="file-title">
-                        <strong>{{ resource.title }}</strong>
-                        <span>{{ resource.typeLabel }}</span>
-                      </div>
-                    </div>
-
-                    <div class="resource-read-row">
-                      <span :class="{ read: resource.isRead }">{{ resourceReadLabel(resource) }}</span>
-                      <button type="button" @click.stop="toggleResourceRead(resource)">
-                        {{ resource.isRead ? '标为未读' : '标为已读' }}
-                      </button>
-                    </div>
-
-                    <div v-if="hasResourceUsage(resource)" class="resource-usage-row">
-                      <span>浏览 {{ resource.viewCount || 0 }}</span>
-                      <span>下载 {{ resource.downloadCount || 0 }}</span>
-                      <span>使用 {{ formatReadDuration(resource.durationSeconds || 0) }}</span>
-                    </div>
-
-                    <div v-if="isImageResource(resource) && resource.previewUrl" class="file-image-preview">
-                      <img
-                        :src="resource.previewUrl"
-                        :alt="resource.title"
-                        loading="lazy"
-                        @error="e => e.target.style.display = 'none'"
-                      />
-                    </div>
-
-                    <div v-if="canPreviewResource(resource) || resource.downloadUrl" class="file-actions">
-                      <button v-if="canPreviewResource(resource)" type="button" @click.stop="previewNodeResource(resource)">
-                        预览
-                      </button>
-                      <button v-if="resource.downloadUrl" type="button" @click.stop="downloadNodeResource(resource)">
-                        下载
-                      </button>
-                    </div>
-                  </div>
-
-                  <div v-if="nodeQuizData" class="resource-item quiz-item">
-                    <div class="file-head">
-                      <span class="file-icon check-icon">✓</span>
-                      <div class="file-title">
-                        <strong>{{ nodeQuizData.title || '巩固练习' }}</strong>
-                        <span>{{ nodeQuizData.questionCount || 0 }} 道题</span>
-                      </div>
-                    </div>
-                    <router-link class="quiz-action-btn" :to="pathQuizLink(nodeQuizData, selectedNode)">
-                      开始练习
-                    </router-link>
-                  </div>
-                </template>
-
-                <div v-else-if="selectedNode._quizError || selectedNode._resError" class="resources-empty error">
-                  <span>{{ selectedNode._quizError || selectedNode._resError }}</span>
-                  <button
-                    v-if="selectedNode._quizError"
-                    class="resources-retry-btn"
-                    type="button"
-                    :disabled="selectedNode.status === 'locked' || isNodeQuizGenerating(selectedNode)"
-                    @click.stop="ensureNodeResources(selectedNode, 'quiz')"
-                  >
-                    {{ isNodeQuizGenerating(selectedNode) ? '生成中...' : '重新生成检测' }}
-                  </button>
-                  <button
-                    v-else-if="selectedNode._resError"
-                    class="resources-retry-btn"
-                    type="button"
-                    :disabled="selectedNode.status === 'locked' || isNodeResourceGenerating(selectedNode)"
-                    @click.stop="ensureNodeResources(selectedNode, 'resources')"
-                  >
-                    {{ isNodeResourceGenerating(selectedNode) ? '生成中...' : '重新生成资料' }}
-                  </button>
-                </div>
-
-                <div v-else class="resources-empty">
-                  暂无学习资料
-                </div>
-              </div>
-
               <div class="card-actions">
                 <button
                   class="start-btn"
                   type="button"
                   :disabled="selectedNode.status === 'locked' || isNodeGenerationBusy(selectedNode)"
-                  @click="loadNodeResources"
+                  @click="startNodeLearning"
                 >
                   <template v-if="isNodeGenerationBusy(selectedNode)">生成中...</template>
-                  <template v-else-if="showResources">收起资料</template>
                   <template v-else>开始学习</template>
                 </button>
               </div>
@@ -597,6 +495,11 @@ import { renderMath } from '../utils/renderMath'
 import 'katex/dist/katex.min.css'
 
 const PATH_CACHE_KEY = 'zhiban_path_state'
+<<<<<<< Updated upstream
+=======
+const LAST_SWITCHED_KEY = 'zhiban_last_switched_path_id'
+const CLASSROOM_PENDING_KEY = 'zhiban_pending_classroom_node'
+>>>>>>> Stashed changes
 const route = useRoute()
 const router = useRouter()
 
@@ -1416,7 +1319,13 @@ const generateNewPath = async () => {
         if (event.type === 'error') {
           streamError = new Error(event.detail || '生成学习路径失败')
         }
-      }
+      },
+      err => {
+        if (runId === generationRunId.value) {
+          console.warn('[StudyPath] stream path generation interrupted:', err)
+        }
+      },
+      { timeoutMs: 45000 }
     )
 
     if (runId !== generationRunId.value) return
@@ -2472,6 +2381,47 @@ const closeNodeCard = () => {
     selectedNode.value = null
     nodeSessionId.value = ''
   }, 180)
+}
+
+const startNodeLearning = () => {
+  const node = selectedNode.value
+  if (!node || node.status === 'locked' || isNodeGenerationBusy(node)) return
+
+  const resources = normalizeNodeResources(node._resources?.length ? node._resources : node.resources, node)
+  const quiz = node._quiz || nodeQuizData.value || buildNodeQuiz(node)
+  const payload = {
+    pathId: pathState.value?.pathId || '',
+    nodeId: node.id,
+    title: node.title,
+    description: node.description || node.summary || '',
+    estimatedMinutes: node.estimatedMinutes || 0,
+    rule: node.rule || '',
+    resources: resources.map(item => ({
+      id: item.id,
+      resourceId: item.resourceId,
+      type: item.type,
+      typeLabel: item.typeLabel,
+      title: item.title,
+      previewUrl: item.previewUrl,
+      downloadUrl: item.downloadUrl
+    })),
+    quizSessionId: quiz?.sessionId || node.sessionId || '',
+    createdAt: Date.now()
+  }
+
+  try {
+    sessionStorage.setItem(CLASSROOM_PENDING_KEY, JSON.stringify(payload))
+  } catch {
+    // ignore
+  }
+
+  closeNodeCard()
+  window.dispatchEvent(new CustomEvent('zhiban-pet-notice', {
+    detail: {
+      message: '开始学习入口已切换为互动课堂预留位，下一步会从这里进入课堂学习。',
+      duration: 5200
+    }
+  }))
 }
 
 const loadNodeResources = async () => {

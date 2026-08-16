@@ -141,8 +141,32 @@ async def _extract_portrait_and_refresh(user_id: int, chat_group_id: int):
     invalidate_portrait_cache(user_id)
 
 
+<<<<<<< Updated upstream
 def _get_or_create_chat(user_id: int, chat_group_id: int) -> Brain:
     instance_key = f"brain_{user_id}_{chat_group_id}"
+=======
+async def _persist_memory_and_refresh(user_id: int, chat_group_id: int, agent_id: int | None = None):
+    """后台写入多级长期记忆（冷却 + 每用户锁 + 水位线在 memory.service 内）"""
+    from backend.src.service.memory.service import persist_memory_after_chat
+    try:
+        await persist_memory_after_chat(user_id, chat_group_id, agent_id)
+    except Exception:
+        logger.exception("记忆写入失败 user=%s group=%s", user_id, chat_group_id)
+
+
+async def _build_memory_context(user_id: int, chat_group_id: int, user_query: str = "") -> str:
+    """构建长期记忆上下文文本（读路径无 LLM，短缓存）。
+
+    不再吞异常：build_memory_context 对"无记忆"本就返回空串，只有真实
+    错误会抛到这里 —— 让异常浮出来，避免像之前时区 bug 那样被静默吞掉。
+    """
+    from backend.src.service.memory.retrieval import build_memory_context
+    return await build_memory_context(user_id, chat_group_id, user_query)
+
+
+def _get_or_create_chat(user_id: int, chat_group_id: int, agent_id: int | None = None) -> Brain:
+    instance_key = f"brain_{user_id}_{chat_group_id}_{agent_id or 0}"
+>>>>>>> Stashed changes
     if instance_key not in _chat_instances:
         if len(_chat_instances) >= _MAX_CHAT_INSTANCES:
             _chat_instances.popitem(last=False)

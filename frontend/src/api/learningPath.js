@@ -28,19 +28,38 @@ export function generateLearningPath(data) {
   })
 }
 
-export async function generateLearningPathStream(data, onEvent, onError) {
+export async function generateLearningPathStream(data, onEvent, onError, options = {}) {
   const token = localStorage.getItem('token')
   const baseURL = request.defaults.baseURL || ''
   const url = `${baseURL}/path/generate/stream`
+  const timeoutMs = Number(options.timeoutMs || 45000)
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+  const setTimer = typeof window !== 'undefined' ? window.setTimeout.bind(window) : setTimeout
+  const clearTimer = typeof window !== 'undefined' ? window.clearTimeout.bind(window) : clearTimeout
+  let inactivityTimer = null
+
+  const clearInactivityTimer = () => {
+    if (!inactivityTimer) return
+    clearTimer(inactivityTimer)
+    inactivityTimer = null
+  }
+
+  const resetInactivityTimer = () => {
+    if (!controller || !timeoutMs) return
+    clearInactivityTimer()
+    inactivityTimer = setTimer(() => controller.abort(), timeoutMs)
+  }
 
   try {
+    resetInactivityTimer()
     const response = await fetch(url, {
       method: 'POST',
       headers: apiFetchHeaders({
         'Content-Type': 'application/json',
         ...(token ? { token } : {})
       }),
-      body: JSON.stringify(data || {})
+      body: JSON.stringify(data || {}),
+      ...(controller ? { signal: controller.signal } : {})
     })
 
     if (!response.ok) {
@@ -55,6 +74,7 @@ export async function generateLearningPathStream(data, onEvent, onError) {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
+      resetInactivityTimer()
 
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
@@ -65,15 +85,22 @@ export async function generateLearningPathStream(data, onEvent, onError) {
         const jsonStr = line.slice(6).trim()
         if (!jsonStr || jsonStr === '[DONE]') continue
         try {
-          onEvent?.(JSON.parse(jsonStr))
+          const parsed = JSON.parse(jsonStr)
+          resetInactivityTimer()
+          onEvent?.(parsed)
         } catch {
           // skip unparseable event
         }
       }
     }
   } catch (err) {
-    onError?.(err)
-    throw err
+    const streamError = err?.name === 'AbortError'
+      ? new Error('学习路径生成响应超时，正在尝试普通生成。')
+      : err
+    onError?.(streamError)
+    throw streamError
+  } finally {
+    clearInactivityTimer()
   }
 }
 

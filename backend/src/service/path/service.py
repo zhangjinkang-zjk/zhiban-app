@@ -79,6 +79,24 @@ def _compute_node_count(subject: str, picture) -> int:
     return max(8, min(30, base + level_adjust))
 
 
+async def _path_has_nodes(path_id: int) -> bool:
+    return await PathNode.filter(path_id=path_id).exists()
+
+
+async def _remove_empty_path_shell(path: LearningPath, *, reason: str) -> bool:
+    if await _path_has_nodes(path.id):
+        return False
+    logger.warning(
+        "remove empty learning path shell path_id=%s user_id=%s subject=%s reason=%s",
+        path.id,
+        path.user_id,
+        path.subject,
+        reason,
+    )
+    await path.delete()
+    return True
+
+
 class PathService:
     @staticmethod
     async def generate_path_stream(subject: str, user_id: int, difficulty: str = "medium", node_count: int = 0):
@@ -95,10 +113,12 @@ class PathService:
 
         existing = await LearningPath.filter(user_id=user_id, subject=subject).first()
         if existing:
-            detail = await PathService.get_path(existing.id, user_id)
-            yield event({"type": "cached", "path": detail})
-            yield event({"type": "done", "path": detail})
-            return
+            if await _path_has_nodes(existing.id):
+                detail = await PathService.get_path(existing.id, user_id)
+                yield event({"type": "cached", "path": detail})
+                yield event({"type": "done", "path": detail})
+                return
+            await _remove_empty_path_shell(existing, reason="stream_generate_start")
 
         portrait_context = "No portrait data"
         mastery_context = "No mastery data"
@@ -149,11 +169,21 @@ class PathService:
         except IntegrityError:
             existing = await LearningPath.filter(user_id=user_id, subject=subject).first()
             if existing:
-                detail = await PathService.get_path(existing.id, user_id)
-                yield event({"type": "cached", "path": detail})
-                yield event({"type": "done", "path": detail})
-                return
-            raise
+                if await _path_has_nodes(existing.id):
+                    detail = await PathService.get_path(existing.id, user_id)
+                    yield event({"type": "cached", "path": detail})
+                    yield event({"type": "done", "path": detail})
+                    return
+                await _remove_empty_path_shell(existing, reason="stream_integrity_retry")
+                path = await LearningPath.create(
+                    subject=subject,
+                    difficulty=difficulty,
+                    node_count=max(0, node_count),
+                    cover_tags="[]",
+                    user=user,
+                )
+            else:
+                raise
 
         yield event({
             "type": "start",
@@ -368,7 +398,10 @@ class PathService:
 
         existing = await LearningPath.filter(user_id=user_id, subject=subject).first()
         if existing:
-            return {"path_id": existing.id, "subject": subject, "nodes": [], "cached": True}
+            if await _path_has_nodes(existing.id):
+                detail = await PathService.get_path(existing.id, user_id)
+                return {**(detail or {"path_id": existing.id, "subject": subject, "nodes": []}), "cached": True}
+            await _remove_empty_path_shell(existing, reason="generate_start")
 
         portrait_context = "暂无画像数据"
         mastery_context = "暂无掌握度数据"
@@ -464,8 +497,19 @@ class PathService:
         except IntegrityError:
             existing = await LearningPath.filter(user_id=user_id, subject=subject).first()
             if existing:
-                return {"path_id": existing.id, "subject": subject, "nodes": [], "cached": True}
-            raise
+                if await _path_has_nodes(existing.id):
+                    detail = await PathService.get_path(existing.id, user_id)
+                    return {**(detail or {"path_id": existing.id, "subject": subject, "nodes": []}), "cached": True}
+                await _remove_empty_path_shell(existing, reason="generate_integrity_retry")
+                path = await LearningPath.create(
+                    subject=subject,
+                    difficulty=difficulty,
+                    node_count=len(nodes_data),
+                    cover_tags=json.dumps([n.get("topic") for n in nodes_data], ensure_ascii=False),
+                    user=user,
+                )
+            else:
+                raise
 
         nodes = []
         created_nodes = []
